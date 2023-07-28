@@ -2,13 +2,15 @@ import sqlite3
 
 from .scrape.work import Work
 
+
 def open_db(path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.isolation_level = None
 
     cur = conn.cursor()
 
-    cur.executescript("""
+    cur.executescript(
+        """
     CREATE TABLE IF NOT EXISTS works (
         id INTEGER PRIMARY KEY,
         title TEXT NOT NULL,
@@ -44,9 +46,11 @@ def open_db(path: str) -> sqlite3.Connection:
         PRIMARY KEY (tag, work_id),
         FOREIGN KEY (work_id) REFERENCES works (id)
     );
-    """);
+    """
+    )
 
     return conn
+
 
 def write_work(conn: sqlite3.Connection, work: Work):
     cur = conn.cursor()
@@ -63,11 +67,11 @@ def write_work(conn: sqlite3.Connection, work: Work):
                 :content
             );
             """,
-            work["content"]
+            work["content"],
         )
 
         work["content"] = None
-    
+
     cur.execute(
         """
         INSERT OR REPLACE INTO works VALUES (
@@ -90,7 +94,7 @@ def write_work(conn: sqlite3.Connection, work: Work):
             :content
         );
         """,
-        work
+        work,
     )
 
     cur.executemany(
@@ -102,7 +106,7 @@ def write_work(conn: sqlite3.Connection, work: Work):
         );
         """,
         [
-            { "tag": tag, "work_id": work["id"], "type": ty }
+            {"tag": tag, "work_id": work["id"], "type": ty}
             for ty, tags in {
                 "rating": work["rating_tags"],
                 "warning": work["warning_tags"],
@@ -110,10 +114,10 @@ def write_work(conn: sqlite3.Connection, work: Work):
                 "fandom": work["fandom_tags"],
                 "character": work["character_tags"],
                 "relationship": work["relationship_tags"],
-                "freeform": work["freeform_tags"]
+                "freeform": work["freeform_tags"],
             }.items()
             for tag in tags
-        ]
+        ],
     )
 
     cur.execute("COMMIT;")

@@ -1,10 +1,11 @@
 import re
 from typing import Optional, TypedDict
-import requests
+import httpx
 from bs4 import BeautifulSoup, PageElement
 from urllib.parse import unquote
 
 from . import RatelimitError
+
 
 class Work(TypedDict):
     id: int
@@ -46,22 +47,25 @@ class Chapter(TypedDict):
     content: str
 
 
-def get_work(work_id: int) -> Optional[Work]:
-    soup = download_work(work_id)
+async def get_work(client: httpx.AsyncClient, work_id: int) -> Optional[Work]:
+    soup = await download_work(client, work_id)
     if soup is None:
         return None
 
     return parse_work(soup, work_id)
 
 
-def download_work(work_id: int) -> Optional[BeautifulSoup]:
-    res = requests.get(
-        f"https://archiveofourown.org/works/{work_id}?view_full_work=true"
+async def download_work(
+    client: httpx.AsyncClient, work_id: int
+) -> Optional[BeautifulSoup]:
+    res = await client.get(
+        f"https://archiveofourown.org/works/{work_id}",
+        params={"view_adult": "true", "view_full_work": "true"},
     )
 
     if res.status_code == 404:
         return None
-    
+
     if res.status_code == 429:
         raise RatelimitError
 
@@ -194,7 +198,7 @@ def parse_work_content(soup: BeautifulSoup) -> str | list[Chapter]:
 
     chapter_tags = container.find_all(id=re.compile("chapter-\d+"))
     if chapter_tags:
-        return [ parse_chapter(tag) for tag in chapter_tags ]
+        return [parse_chapter(tag) for tag in chapter_tags]
     else:
         return "\n".join(map(str, container.find(class_="userstuff").contents))
 
