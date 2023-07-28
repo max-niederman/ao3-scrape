@@ -1,6 +1,6 @@
 import sqlite3
 
-from .scrape import Chapter, Work
+from .scrape.work import Work
 
 def open_db(path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
@@ -56,7 +56,7 @@ def write_work(conn: sqlite3.Connection, work: Work):
     if isinstance(work["content"], list):
         cur.executemany(
             f"""
-            INSERT INTO chapters VALUES (
+            INSERT OR REPLACE INTO chapters VALUES (
                 :id,
                 {work["id"]},
                 :title,
@@ -70,7 +70,7 @@ def write_work(conn: sqlite3.Connection, work: Work):
     
     cur.execute(
         """
-        INSERT INTO works VALUES (
+        INSERT OR REPLACE INTO works VALUES (
             :id,
             :title,
             :author,
@@ -95,7 +95,7 @@ def write_work(conn: sqlite3.Connection, work: Work):
 
     cur.executemany(
         """
-        INSERT INTO taggings VALUES (
+        INSERT OR REPLACE INTO taggings VALUES (
             :tag,
             :work_id,
             :type

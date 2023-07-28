@@ -4,6 +4,8 @@ import requests
 from bs4 import BeautifulSoup, PageElement
 from urllib.parse import unquote
 
+from . import RatelimitError
+
 class Work(TypedDict):
     id: int
 
@@ -59,6 +61,12 @@ def download_work(work_id: int) -> Optional[BeautifulSoup]:
 
     if res.status_code == 404:
         return None
+    
+    if res.status_code == 429:
+        raise RatelimitError
+
+    if res.status_code != 200:
+        raise Exception(f"HTTP {res.status_code} {res.reason}")
 
     return BeautifulSoup(res.text, "html.parser")
 
