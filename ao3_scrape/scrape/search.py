@@ -1,8 +1,8 @@
 from enum import Enum
+import aiohttp
 from bs4 import BeautifulSoup
-import httpx
 
-from . import RatelimitError
+from . import BASE_URL, ParseError, RatelimitError, with_backoff
 
 
 class TimeUnit(Enum):
@@ -13,17 +13,26 @@ class TimeUnit(Enum):
 
 
 async def get_page(
-    client: httpx.AsyncClient, time_ago: int, time_unit: TimeUnit, page: int
+    client: aiohttp.ClientSession, time_ago: int, time_unit: TimeUnit, page: int
 ) -> list[int]:
     soup = await download_page(client, time_ago, time_unit, page)
-    return parse_page(soup)
+    try:
+        return parse_page(soup)
+    except Exception as underlying:
+        error = ParseError(
+            f"page {page} of search of works updated {time_ago} {time_unit.value}s ago",
+            f"page_{time_ago}_{time_unit.value}_{page}",
+        )
+        error.save_html(soup)
+        raise error from underlying
 
 
+@with_backoff
 async def download_page(
-    client: httpx.AsyncClient, time_ago: int, time_unit: TimeUnit, page: int
+    client: aiohttp.ClientSession, time_ago: int, time_unit: TimeUnit, page: int
 ) -> BeautifulSoup:
     res = await client.get(
-        f"https://archiveofourown.org/works/search",
+        f"{BASE_URL}/works/search",
         params={
             "work_search[revised_at]": f"{str(time_ago)}+{time_unit.value}",
             "page": page,
@@ -50,13 +59,13 @@ async def download_page(
         },
     )
 
-    if res.status_code == 429:
+    if res.status == 429:
         raise RatelimitError
 
-    if res.status_code != 200:
+    if res.status != 200:
         raise Exception(f"HTTP {res.status_code} {res.reason}")
 
-    return BeautifulSoup(res.text, "html.parser")
+    return BeautifulSoup(await res.text(), "html.parser")
 
 
 def parse_page(soup: BeautifulSoup) -> list[int]:

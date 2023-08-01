@@ -1,10 +1,11 @@
 import re
 from typing import Optional, TypedDict
-import httpx
+
+import aiohttp
 from bs4 import BeautifulSoup, PageElement
 from urllib.parse import unquote
 
-from . import RatelimitError
+from . import BASE_URL, ParseError, RatelimitError, with_backoff
 
 
 class Work(TypedDict):
@@ -47,32 +48,38 @@ class Chapter(TypedDict):
     content: str
 
 
-async def get_work(client: httpx.AsyncClient, work_id: int) -> Optional[Work]:
+async def get_work(client: aiohttp.ClientSession, work_id: int) -> Optional[Work]:
     soup = await download_work(client, work_id)
     if soup is None:
         return None
 
-    return parse_work(soup, work_id)
+    try:
+        return parse_work(soup, work_id)
+    except Exception as underlying:
+        error = ParseError(f"work {work_id}", f"work_{work_id}")
+        error.save_html(soup)
+        raise error from underlying
 
 
+@with_backoff
 async def download_work(
-    client: httpx.AsyncClient, work_id: int
+    client: aiohttp.ClientSession, work_id: int
 ) -> Optional[BeautifulSoup]:
     res = await client.get(
-        f"https://archiveofourown.org/works/{work_id}",
+        f"{BASE_URL}/works/{work_id}",
         params={"view_adult": "true", "view_full_work": "true"},
     )
 
-    if res.status_code == 404:
+    if res.status == 404:
         return None
 
-    if res.status_code == 429:
+    if res.status == 429:
         raise RatelimitError
 
-    if res.status_code != 200:
+    if res.status != 200:
         raise Exception(f"HTTP {res.status_code} {res.reason}")
 
-    return BeautifulSoup(res.text, "html.parser")
+    return BeautifulSoup(await res.text(), "html.parser")
 
 
 def parse_work(soup: BeautifulSoup, work_id: int) -> Work:
@@ -109,11 +116,19 @@ def parse_work_title(soup: BeautifulSoup) -> str:
 
 
 def parse_work_author(soup: BeautifulSoup) -> str:
-    return unquote(soup.find("a", rel="author")["href"].split("/")[2])
+    tag = soup.find("a", rel="author")
+    if tag is None:
+        return "Anonymous"
+
+    return unquote(tag["href"].split("/")[2])
 
 
 def parse_work_author_pseud(soup: BeautifulSoup) -> str:
-    return unquote(soup.find("a", rel="author")["href"].split("/")[4])
+    tag = soup.find("a", rel="author")
+    if tag is None:
+        return "Anonymous"
+
+    return unquote(tag["href"].split("/")[4])
 
 
 def parse_work_module(soup: BeautifulSoup, name: str) -> Optional[str]:

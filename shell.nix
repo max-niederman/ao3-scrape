@@ -2,9 +2,7 @@
 
 pkgs.mkShell {
   buildInputs = with pkgs; [
-    (python3.withPackages
-      (ps: with ps; [
-      ]))
+    python311
     poetry
   ];
 }
