@@ -27,3 +27,13 @@ DOWNLOAD_TIME.labels(doc_type="work")
 PAGE = Gauge("page", "Start of curreng chunk of pages being downloaded.")
 
 WORK_UPDATED_TIME = Gauge("work_updated", "Update time of last work downloaded.")
+
+DATABASE_SIZE = Gauge("database_size", "Size of database in bytes.")
+
+def update_database_size(db: str):
+    DATABASE_SIZE.set(os.path.getsize(db))
+
+async def update_database_size_worker(db: str, period: float = 1):
+    while True:
+        update_database_size(db)
+        await asyncio.sleep(period)
