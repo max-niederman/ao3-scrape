@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime
 from ipaddress import IPv4Network, IPv6Network
 import random
@@ -11,6 +12,12 @@ from ao3_scrape.metrics import PAGE, WORK_UPDATED_TIME
 from ao3_scrape.scrape import work, search
 
 
+@dataclass
+class ScrapeTask:
+    search_unit: search.TimeUnit
+    search_time: int
+    page: int
+
 async def scrape_works(
     db: sqlite3.Connection,
     ip_network: Optional[IPv4Network | IPv6Network],
@@ -19,19 +26,37 @@ async def scrape_works(
     search_time: int,
     start_page: int,
 ):
-    for chunk in range(start_page, 5001, page_concurrency):
-        pages = await asyncio.gather(
-            *[
-                scrape_page(db, ip_network, search_time, search_unit, chunk + page)
-                for page in range(page_concurrency)
-            ]
-        )
+    task_queue = asyncio.Queue(maxsize=page_concurrency)
 
-        PAGE.set(chunk)
+    workers = [asyncio.create_task(scrape_page_worker(db, ip_network, task_queue)) for _ in range(page_concurrency)]
 
-        if pages[-1] is None:
+    async def queue_tasks():
+        for page in range(start_page, 5001):
+            await task_queue.put(ScrapeTask(
+                search_unit=search_unit,
+                search_time=search_time,
+                page=page,
+            ))
+    
+    queuer = asyncio.create_task(queue_tasks())
+    
+    await asyncio.wait(workers, return_when=asyncio.ALL_COMPLETED)
+    queuer.cancel()
+
+async def scrape_page_worker(
+    db: sqlite3.Connection,
+    ip_network: Optional[IPv4Network | IPv6Network],
+    task_queue: asyncio.Queue[ScrapeTask],
+):
+    while True:
+        task = await task_queue.get()
+
+        PAGE.set(task.page)
+        
+        page = await scrape_page(db, ip_network, task.search_time, task.search_unit, task.page)
+
+        if page is None:
             break
-
 
 async def scrape_page(
     db: sqlite3.Connection,

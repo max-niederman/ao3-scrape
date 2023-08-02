@@ -50,8 +50,6 @@ def main(
 
         search_time -= 1
 
-    db_size_metric_task.cancel()
-
 
 if __name__ == "__main__":
     app()
