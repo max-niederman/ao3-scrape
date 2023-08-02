@@ -19,7 +19,7 @@ DOWNLOAD_TIME = Histogram(
     "download_time",
     "Time taken to download documents.",
     ["doc_type"],
-    buckets=[0.1, 0.5, 1, 2, 5, 10, 15, 30, 60],
+    buckets=[0.1, 0.25, 0.5, 0.75, 1, 2, 5, 10],
 )
 DOWNLOAD_TIME.labels(doc_type="page")
 DOWNLOAD_TIME.labels(doc_type="work")
@@ -30,8 +30,10 @@ WORK_UPDATED_TIME = Gauge("work_updated", "Update time of last work downloaded."
 
 DATABASE_SIZE = Gauge("database_size", "Size of database in bytes.")
 
+
 def update_database_size(db: str):
     DATABASE_SIZE.set(os.path.getsize(db))
+
 
 async def update_database_size_worker(db: str, period: float = 1):
     while True:

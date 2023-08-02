@@ -1,7 +1,5 @@
-import asyncio
-from dataclasses import dataclass
 import time
-from typing import Awaitable, Callable, TypeVar
+from typing import Awaitable, Callable
 from aiohttp import ClientResponse
 
 from bs4 import BeautifulSoup
