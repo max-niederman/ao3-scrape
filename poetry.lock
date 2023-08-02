@@ -661,6 +661,20 @@ files = [
 ]
 
 [[package]]
+name = "prometheus-client"
+version = "0.17.1"
+description = "Python client for the Prometheus monitoring system."
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "prometheus_client-0.17.1-py3-none-any.whl", hash = "sha256:e537f37160f6807b8202a6fc4764cdd19bac5480ddd3e0d463c3002b34462101"},
+    {file = "prometheus_client-0.17.1.tar.gz", hash = "sha256:21e674f39831ae3f8acde238afd9a27a37d0d2fb5a28ea094f0ce25d2cbf2091"},
+]
+
+[package.extras]
+twisted = ["twisted"]
+
+[[package]]
 name = "pycares"
 version = "4.3.0"
 description = "Python interface for c-ares"
@@ -917,4 +931,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "cf4ad2790526df7692b5de938990f4c5c8d8705cd2356f4d86567c978ebcfbdf"
+content-hash = "667033ad9c4c1245ea79ae7ae8862efce90326f08bd257b50980b2bc1cd5a598"

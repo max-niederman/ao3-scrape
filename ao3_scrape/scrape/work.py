@@ -5,7 +5,7 @@ import aiohttp
 from bs4 import BeautifulSoup, PageElement
 from urllib.parse import unquote
 
-from . import BASE_URL, ParseError, RatelimitError, with_backoff
+from . import BASE_URL, ParseError, downloader
 
 
 class Work(TypedDict):
@@ -61,7 +61,7 @@ async def get_work(client: aiohttp.ClientSession, work_id: int) -> Optional[Work
         raise error from underlying
 
 
-@with_backoff
+@downloader(doc_type="work")
 async def download_work(
     client: aiohttp.ClientSession, work_id: int
 ) -> Optional[BeautifulSoup]:
@@ -73,13 +73,7 @@ async def download_work(
     if res.status == 404:
         return None
 
-    if res.status == 429:
-        raise RatelimitError
-
-    if res.status != 200:
-        raise Exception(f"HTTP {res.status_code} {res.reason}")
-
-    return BeautifulSoup(await res.text(), "html.parser")
+    return res
 
 
 def parse_work(soup: BeautifulSoup, work_id: int) -> Work:
@@ -156,7 +150,7 @@ def parse_work_words(soup: BeautifulSoup) -> int:
 
 
 def parse_work_chapters_published(soup: BeautifulSoup) -> int:
-    return int(soup.find("dd", class_="chapters").text.split("/")[0])
+    return int(soup.find("dd", class_="chapters").text.split("/")[0].replace(",", ""))
 
 
 def parse_work_chapters_total(soup: BeautifulSoup) -> Optional[int]:
@@ -165,7 +159,7 @@ def parse_work_chapters_total(soup: BeautifulSoup) -> Optional[int]:
     if text == "?":
         return None
     else:
-        return int(text)
+        return int(text.replace(",", ""))
 
 
 def parse_work_language(soup: BeautifulSoup) -> str:

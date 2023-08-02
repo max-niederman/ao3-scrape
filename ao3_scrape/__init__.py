@@ -1,3 +1,4 @@
+from datetime import datetime
 from ipaddress import IPv4Network, IPv6Network
 import random
 import sqlite3
@@ -6,35 +7,37 @@ import aiohttp
 import asyncio
 import socket
 from ao3_scrape import database
+from ao3_scrape.metrics import PAGE, WORK_UPDATED_TIME
 from ao3_scrape.scrape import work, search
 
 
 async def scrape_works(
     db: sqlite3.Connection,
     ip_network: Optional[IPv4Network | IPv6Network],
-    time_ago: int,
-    time_unit: search.TimeUnit,
-    chunk_size_pages: int,
+    page_concurrency: int,
+    search_unit: search.TimeUnit,
+    search_time: int,
+    start_page: int,
 ):
-    for t in range(0, time_ago):
-        print(f"== Downloading works updated {t} {time_unit.value}s ago.")
-        for chunk in range(0, 5000, chunk_size_pages):
-            pages = await asyncio.gather(
-                *[
-                    scrape_page(db, ip_network, t, time_unit, chunk + page + 1)
-                    for page in range(chunk_size_pages)
-                ]
-            )
+    for chunk in range(start_page, 5001, page_concurrency):
+        pages = await asyncio.gather(
+            *[
+                scrape_page(db, ip_network, search_time, search_unit, chunk + page)
+                for page in range(page_concurrency)
+            ]
+        )
 
-            if pages[-1] is None:
-                break
+        PAGE.set(chunk)
+
+        if pages[-1] is None:
+            break
 
 
 async def scrape_page(
     db: sqlite3.Connection,
     ip_network: Optional[IPv4Network | IPv6Network],
-    t: int,
-    time_unit: search.TimeUnit,
+    search_time: int,
+    search_unit: search.TimeUnit,
     page: int,
 ) -> Optional[int]:
     local_addr = (
@@ -45,7 +48,7 @@ async def scrape_page(
     async with aiohttp.ClientSession(connector=connector) as client:
         print(f"= Downloading page {page} from {local_addr or 'default address'}.")
 
-        work_ids = await search.get_page(client, t, time_unit, page)
+        work_ids = await search.get_page(client, search_time, search_unit, page)
         if work_ids == []:
             return None
 
@@ -56,6 +59,12 @@ async def scrape_page(
             if parsed is None:
                 print(f"Work {work_id} linked by search but not found upon request.")
                 continue
+
+            WORK_UPDATED_TIME.set(
+                datetime.fromisoformat(
+                    parsed["updated"] or parsed["published"]
+                ).timestamp()
+            )
 
             database.write_work(db, parsed)
 

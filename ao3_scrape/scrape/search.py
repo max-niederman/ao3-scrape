@@ -2,7 +2,7 @@ from enum import Enum
 import aiohttp
 from bs4 import BeautifulSoup
 
-from . import BASE_URL, ParseError, RatelimitError, with_backoff
+from . import BASE_URL, ParseError, RatelimitError, downloader
 
 
 class TimeUnit(Enum):
@@ -27,11 +27,11 @@ async def get_page(
         raise error from underlying
 
 
-@with_backoff
+@downloader(doc_type="page")
 async def download_page(
     client: aiohttp.ClientSession, time_ago: int, time_unit: TimeUnit, page: int
 ) -> BeautifulSoup:
-    res = await client.get(
+    return await client.get(
         f"{BASE_URL}/works/search",
         params={
             "work_search[revised_at]": f"{str(time_ago)}+{time_unit.value}",
@@ -58,14 +58,6 @@ async def download_page(
             "commit": "Search",
         },
     )
-
-    if res.status == 429:
-        raise RatelimitError
-
-    if res.status != 200:
-        raise Exception(f"HTTP {res.status_code} {res.reason}")
-
-    return BeautifulSoup(await res.text(), "html.parser")
 
 
 def parse_page(soup: BeautifulSoup) -> list[int]:

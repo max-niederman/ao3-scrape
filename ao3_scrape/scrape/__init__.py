@@ -1,8 +1,12 @@
 import asyncio
 from dataclasses import dataclass
-from typing import Callable, TypeVar
+import time
+from typing import Awaitable, Callable, TypeVar
+from aiohttp import ClientResponse
 
 from bs4 import BeautifulSoup
+
+from ao3_scrape.metrics import DOWNLOAD_TIME, DOWNLOADED, DOWNLOADED_BYTES
 
 
 class RatelimitError(Exception):
@@ -27,16 +31,33 @@ class ParseError(Exception):
 BASE_URL = "https://archiveofourown.org"
 
 
-R = TypeVar("R")
+def downloader(
+    doc_type: str = None,
+) -> Callable[[Callable[..., Awaitable[ClientResponse]]], Awaitable[BeautifulSoup]]:
+    def decorator(func: Callable[..., Awaitable[ClientResponse]]):
+        async def wrapper(*args, **kwargs):
+            try:
+                start = time.time()
+                res = await func(*args, **kwargs)
 
+                if res.status == 429:
+                    raise RatelimitError()
 
-def with_backoff(func: Callable[..., R]) -> Callable[..., R]:
-    async def wrapper(*args, **kwargs):
-        try:
-            return await func(*args, **kwargs)
-        except RatelimitError:
-            print("Ratelimited. Waiting 10 minutes and trying again.")
-            await asyncio.sleep(600)
-            return await wrapper(*args, **kwargs)
+                if res.status != 200:
+                    raise Exception(f"HTTP {res.status_code} {res.reason}")
 
-    return wrapper
+                text = await res.text()
+                elapsed = time.time() - start
+
+                DOWNLOADED.labels(doc_type=doc_type).inc()
+                DOWNLOADED_BYTES.labels(doc_type=doc_type).inc(len(text))
+                DOWNLOAD_TIME.labels(doc_type=doc_type).observe(elapsed)
+
+                return BeautifulSoup(text, "html.parser")
+
+            except RatelimitError:
+                return await wrapper(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
