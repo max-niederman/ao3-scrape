@@ -46,6 +46,9 @@ def open_db(path: str) -> sqlite3.Connection:
         PRIMARY KEY (tag, work_id),
         FOREIGN KEY (work_id) REFERENCES works (id)
     );
+
+    CREATE INDEX IF NOT EXISTS chapters_work_id ON chapters (work_id);
+    CREATE INDEX IF NOT EXISTS taggings_work_id ON taggings (work_id);
     """
     )
 
