@@ -1,3 +1,5 @@
+import asyncio
+import random
 import time
 from typing import Awaitable, Callable
 from aiohttp import ClientResponse
@@ -30,6 +32,9 @@ class ParseError(Exception):
 
 BASE_URL = "https://archiveofourown.org"
 
+RATELIMIT_TIMEOUT = 600
+RATELIMIT_JITTER = 60
+
 ssl_context = ssl.create_default_context(cafile=certifi.where())
 
 def downloader(
@@ -57,6 +62,10 @@ def downloader(
                 return BeautifulSoup(text, "html.parser")
 
             except RatelimitError:
+                backoff = RATELIMIT_TIMEOUT + RATELIMIT_JITTER * random.random()
+                print(f"Ratelimited, sleeping for {backoff} seconds...")
+                await asyncio.sleep(backoff)
+
                 return await wrapper(*args, **kwargs)
 
         return wrapper
