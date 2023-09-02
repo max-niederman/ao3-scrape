@@ -37,6 +37,7 @@ RATELIMIT_JITTER = 60
 
 ssl_context = ssl.create_default_context(cafile=certifi.where())
 
+
 def downloader(
     doc_type: str = None,
 ) -> Callable[[Callable[..., Awaitable[ClientResponse]]], Awaitable[BeautifulSoup]]:

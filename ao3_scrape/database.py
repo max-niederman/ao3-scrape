@@ -25,6 +25,7 @@ def open_db(path: str) -> sqlite3.Connection:
 
     return conn
 
+
 def init_db(conn: sqlite3.Connection):
     cur = conn.cursor()
 
@@ -154,6 +155,7 @@ def write_work(conn: sqlite3.Connection, work: Work):
 
     cur.execute("COMMIT;")
 
+
 def run_incremental_maintenance(conn: sqlite3.Connection, duration, load):
     cur = conn.cursor()
 
@@ -163,7 +165,13 @@ def run_incremental_maintenance(conn: sqlite3.Connection, duration, load):
         """
     )
 
-async def incremental_maintenance_worker(conn: sqlite3.Connection, interval: float = 300, pause: float = 60, load: float = 0.75):
+
+async def incremental_maintenance_worker(
+    conn: sqlite3.Connection,
+    interval: float = 300,
+    pause: float = 60,
+    load: float = 0.75,
+):
     while True:
         run_incremental_maintenance(conn, pause, load)
         await asyncio.sleep(interval)

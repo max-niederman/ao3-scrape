@@ -12,5 +12,9 @@ pkgs.poetry2nix.mkPoetryApplication {
   python = pkgs.python311;
   projectDir = ./.;
 
+  makeWrapperArgs = [
+    "--set SQLITE_ZSTD_PATH $SQLITE_ZSTD_PATH"
+  ];
+
   SQLITE_ZSTD_PATH = sqlite-zstd;
 }

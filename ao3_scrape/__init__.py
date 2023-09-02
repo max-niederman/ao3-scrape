@@ -11,6 +11,7 @@ from ao3_scrape import database
 from ao3_scrape.metrics import PAGE, WORK_UPDATED_TIME
 from ao3_scrape.scrape import work, search
 
+
 @dataclass
 class ScrapeTask:
     search_unit: search.TimeUnit
