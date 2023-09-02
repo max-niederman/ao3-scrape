@@ -2,7 +2,7 @@ from enum import Enum
 import aiohttp
 from bs4 import BeautifulSoup
 
-from . import BASE_URL, ParseError, RatelimitError, downloader
+from . import BASE_URL, ssl_context, ParseError, RatelimitError, downloader
 
 
 class TimeUnit(Enum):
@@ -57,6 +57,7 @@ async def download_page(
             "work_search[sort_direction]": "desc",
             "commit": "Search",
         },
+        ssl=ssl_context,
     )
 
 

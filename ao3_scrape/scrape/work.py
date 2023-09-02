@@ -5,7 +5,7 @@ import aiohttp
 from bs4 import BeautifulSoup, PageElement
 from urllib.parse import unquote
 
-from . import BASE_URL, ParseError, downloader
+from . import BASE_URL, ssl_context, ParseError, downloader
 
 
 class Work(TypedDict):
@@ -68,6 +68,7 @@ async def download_work(
     res = await client.get(
         f"{BASE_URL}/works/{work_id}",
         params={"view_adult": "true", "view_full_work": "true"},
+        ssl=ssl_context,
     )
 
     if res.status == 404:

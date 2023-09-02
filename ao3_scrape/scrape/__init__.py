@@ -1,6 +1,8 @@
 import time
 from typing import Awaitable, Callable
 from aiohttp import ClientResponse
+import ssl
+import certifi
 
 from bs4 import BeautifulSoup
 
@@ -28,6 +30,7 @@ class ParseError(Exception):
 
 BASE_URL = "https://archiveofourown.org"
 
+ssl_context = ssl.create_default_context(cafile=certifi.where())
 
 def downloader(
     doc_type: str = None,
