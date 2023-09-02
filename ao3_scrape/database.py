@@ -17,8 +17,8 @@ def open_db(path: str) -> sqlite3.Connection:
     cur = conn.cursor()
     cur.executescript(
         """
-        PRAGMA journal_mode = wal;
         PRAGMA auto_vacuum = full;
+        PRAGMA journal_mode = wal;
         PRAGMA foreign_keys = on;
         """
     )
@@ -160,11 +160,10 @@ def run_incremental_maintenance(conn: sqlite3.Connection, duration, load):
     cur.executescript(
         f"""
         SELECT zstd_incremental_maintenance({duration}, {load});
-        VACUUM;
         """
     )
 
 async def incremental_maintenance_worker(conn: sqlite3.Connection, interval: float = 300, pause: float = 60, load: float = 0.75):
     while True:
-        await asyncio.sleep(interval)
         run_incremental_maintenance(conn, pause, load)
+        await asyncio.sleep(interval)
