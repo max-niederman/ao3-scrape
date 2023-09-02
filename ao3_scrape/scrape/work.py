@@ -38,7 +38,7 @@ class Work(TypedDict):
     additional_tags: list[str]
     freeform_tags: list[str]
 
-    content: str | list["Chapter"]
+    content: list["Chapter"]
 
 
 class Chapter(TypedDict):
@@ -78,9 +78,11 @@ async def download_work(
 
 
 def parse_work(soup: BeautifulSoup, work_id: int) -> Work:
+    title = parse_work_title(soup)
+
     return {
         "id": work_id,
-        "title": parse_work_title(soup),
+        "title": title,
         "author": parse_work_author(soup),
         "author_pseud": parse_work_author_pseud(soup),
         "summary": parse_work_module(soup, "summary"),
@@ -102,7 +104,9 @@ def parse_work(soup: BeautifulSoup, work_id: int) -> Work:
         "relationship_tags": parse_work_tag_set(soup, "relationship"),
         "character_tags": parse_work_tag_set(soup, "character"),
         "freeform_tags": parse_work_tag_set(soup, "freeform"),
-        "content": parse_work_content(soup),
+        "content": parse_work_content(
+            soup, single_chapter_meta={"id": work_id, "title": title}
+        ),
     }
 
 
@@ -203,14 +207,23 @@ def parse_work_tag_set(soup: BeautifulSoup, name: str) -> list[str]:
     return [tag.text for tag in container.find_all("a")]
 
 
-def parse_work_content(soup: BeautifulSoup) -> str | list[Chapter]:
+def parse_work_content(
+    soup: BeautifulSoup, single_chapter_meta: Chapter = None
+) -> list[Chapter]:
     container = soup.find(id="chapters")
 
     chapter_tags = container.find_all(id=re.compile("chapter-\d+"))
     if chapter_tags:
         return [parse_chapter(tag) for tag in chapter_tags]
     else:
-        return "\n".join(map(str, container.find(class_="userstuff").contents))
+        return [
+            {
+                **single_chapter_meta,
+                "content": "\n".join(
+                    map(str, container.find(class_="userstuff").contents)
+                ),
+            }
+        ]
 
 
 def parse_chapter(tag: PageElement) -> Chapter:
