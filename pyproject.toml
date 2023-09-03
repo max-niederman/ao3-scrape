@@ -15,7 +15,7 @@ prometheus-client = "^0.17.1"
 certifi = "^2023.7.22"
 
 [tool.poetry.scripts]
-ao3-scrape = "ao3_scrape:cli"
+ao3-scrape = "ao3_scrape:__main__.app"
 
 [build-system]
 requires = ["poetry-core"]
