@@ -24,7 +24,7 @@ DOWNLOAD_TIME = Histogram(
 DOWNLOAD_TIME.labels(doc_type="page")
 DOWNLOAD_TIME.labels(doc_type="work")
 
-PAGE = Gauge("page", "Start of curreng chunk of pages being downloaded.")
+PAGE = Gauge("page", "Start of current chunk of pages being downloaded.")
 
 WORK_UPDATED_TIME = Gauge("work_updated", "Update time of last work downloaded.")
 

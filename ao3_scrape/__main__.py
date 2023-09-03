@@ -31,11 +31,11 @@ def scrape(
     PAGE_CONCURRENCY.set(page_concurrency)
 
     loop.create_task(metrics.update_database_size_worker(db, period=1))
-    loop.create_task(
-        database.incremental_maintenance_worker(
-            db_conn, interval=300, pause=60, load=0.75
-        )
-    )
+    # loop.create_task(
+    #     database.incremental_maintenance_worker(
+    #         db_conn, interval=300, pause=60, load=0.25
+    #     )
+    # )
 
     if prometheus_metrics:
         prometheus_client.start_http_server(8000)
